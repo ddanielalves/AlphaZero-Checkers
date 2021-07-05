@@ -96,7 +96,7 @@ class HumanAgent:
 
     def predict(self, game):
         valid_moves = game.get_valid_moves()
-        print(f"{valid_moves=}")
+        print(f"valid moves: {valid_moves}")
 
         piece = int(input("select a piece: "))
         direction = int(input("select a direction: "))

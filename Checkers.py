@@ -300,7 +300,7 @@ class Checkers:
     def step(self, action):
         self.current_move += 1
         self.play(action)
-        return *self.game_finised(), self.players_turn
+        return self.game_finised()[0], self.game_finised()[1], self.players_turn
             
 
     def game_finised(self):
