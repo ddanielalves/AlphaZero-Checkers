@@ -67,25 +67,28 @@ class DetermenisticAgent:
 
     def predict(self, game):
         valid_actions = game.get_valid_actions()
-        print(len(valid_actions), valid_actions)
+        
         if len(valid_actions) == 1:
-            return valid_actions[0]
+            return valid_actions[0],  {valid_actions[0]: 1}
 
         self.MCTS.run_simulations(game)
-        action = self.get_deterministic_action()
-        return action
+        action, action_probs = self.get_deterministic_action()
+        return action, action_probs
 
     def get_deterministic_action(self):
         max_n = 0
         action = None
-        
-        for child_action in self.MTCTS.root.children:
+        total_n = 0
+        action_ns = []
+        for child_action in self.MCTS.root.children:
 
-            action_n = self.MTCTS.root.children[child_action].N
+            action_n = self.MCTS.root.children[child_action].N
+            action_ns.append(action_n)
+
             if  action_n > max_n:
                 max_n = action_n
                 action = child_action
-        return action
+        return action, dict(zip(list(self.MCTS.root.children.keys()), action_ns))
 
 
 

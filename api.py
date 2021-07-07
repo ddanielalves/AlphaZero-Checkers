@@ -6,7 +6,7 @@ from flask_cors import CORS, cross_origin
 from Checkers import Checkers as Game
 from MCTS import MCTS
 from PV_NN import Policy_Value_NN
-from Agents import StochasticAgent as Agent
+from Agents import DetermenisticAgent as Agent
 import config
 
 app = Flask(__name__)

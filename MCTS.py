@@ -1,5 +1,6 @@
 from warnings import resetwarnings
 import numpy as np
+from tensorflow.python.module.module import valid_identifier
 
 import config
 
@@ -72,6 +73,7 @@ class Node:
         sum_n = 0
         for action in children_actions:
             sum_n += children_actions[action].N
+
         action_values = []
         actions = list(children_actions.keys())
         for action in actions:
@@ -80,8 +82,6 @@ class Node:
             u = config.C_PUCT * node.P * np.sqrt(sum_n)/(1+node.N)
             action_values.append(node.Q + u)
  
-
-        # print(f"{action_values=}")
         return actions[np.argmax(action_values)]
 
     
@@ -142,7 +142,6 @@ class MCTS:
             else:
                 value_aux = -value
 
-            del node.player
             node.update_value(value_aux)
             node = node.parent
     
@@ -152,11 +151,14 @@ class MCTS:
         Args:
             game (Game): Game with the current state
         """
+        for _ in range(config.NUM_RAND_SIMLUATIONS):
+            self.run_one_simulation(game, random=True)
+
         for _ in range(config.NUM_SIMULATIONS):
             self.run_one_simulation(game)
 
 
-    def run_one_simulation(self, game):
+    def run_one_simulation(self, game, random=False):
         # print('finding leaf', game.board.pieces)
         leaf, game = self.find_leaf(game)
         
@@ -173,7 +175,12 @@ class MCTS:
             else:
                 value = -1
         else:
-            policy, value = self.policy_value_netwok.predict(game)
+            if random:
+                value = 0.5
+                valid_actions = game.get_valid_actions()
+                policy = dict(zip(valid_actions, [1/len(valid_actions)]*len(valid_actions)))
+            else:
+                policy, value = self.policy_value_netwok.predict(game)
             leaf.expand(policy)
 
         self.backup_values(leaf, value, player)
@@ -183,14 +190,14 @@ class MCTS:
     def find_leaf(self, game_):
         game = game_.copy()
         node = self.root
-        i = 0
         node.player = game.get_player_turn()
         while not node.is_leaf():
-            i+=1
             action = node.get_simulation_action()
             # print(game.get_valid_actions(), action)
-            game.step(action)
-            
+            _, _, _, reward = game.step(action)
+            if reward != 0:
+                self.backup_values(node, reward, node.player)
+
             node = node.children[action]
             node.player = game.get_player_turn()
             

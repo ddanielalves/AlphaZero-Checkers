@@ -1,4 +1,4 @@
-import logging
+# import logging
 from threading import active_count
 import numpy as np
 import matplotlib.patheffects as PathEffects
@@ -132,42 +132,34 @@ class Board:
         piece_value = self.piece_value(piece)
 
         if piece_value <= 0:
-            logging.debug("a1")
             return False, False
 
         king = piece_value == 2
         if dir_vector[0] == 1 and not king:
-            logging.debug("2")
             return False, False
 
         l, c = self.nr_to_coords(piece)
 
         l_m, c_m = l + dir_vector[0], c + dir_vector[1]
         if not self.valid_position(l_m, c_m):
-            logging.debug("3")
 
             return False, False
 
         move_value = self.piece_value(l=l_m, c=c_m)
         if move_value == 0:
-            logging.debug("4")
             return True, False
 
         if move_value > 0:
-            logging.debug("5")
             return False, False
 
         l_m, c_m = l_m + dir_vector[0], c_m + dir_vector[1]
         if not self.valid_position(l_m, c_m):
-            logging.debug("6")
             return False, False
 
         move_value = self.piece_value(l=l_m, c=c_m)
 
         if move_value == 0:
-            logging.debug("7")
             return True, True
-        logging.debug("8")
 
         return False, False
 
@@ -182,7 +174,7 @@ class Board:
 
 
 class Checkers:
-    def __init__(self, max_moves=400):
+    def __init__(self, max_moves=100):
 
         self.board = Board()
         self.max_moves = max_moves
@@ -208,6 +200,7 @@ class Checkers:
     def reset(self):
         self.done = False
         self.current_move = 0
+        self.valid_moves_updated = False
 
         # 1 if its player one's turn or -1 if it's player two's turn
         # players_turn = 1 - players_turn  
@@ -237,6 +230,11 @@ class Checkers:
         return self.players_turn
 
     def get_valid_moves(self):
+
+
+        if self.valid_moves_updated:
+            return self.valid_moves
+
         valid_moves = []
         jump_moves = []
         directions = [0, 1, 2, 3]
@@ -256,6 +254,8 @@ class Checkers:
             self.valid_moves = jump_moves
         else:     
             self.valid_moves = valid_moves
+        
+        self.valid_moves_updated = True
         return self.valid_moves
 
  
@@ -267,11 +267,14 @@ class Checkers:
         valid, jump = self.board.is_valid_move(action)
         if not valid:
             raise Exception("notvalid", self.board.pieces, old_a, action, self.get_valid_moves(), self.players_turn )
-           
+
         piece, dir_vector = action
         if not isinstance(dir_vector, tuple):
             dir_vector = DIRECTIONS[dir_vector]
         piece_val = self.board.piece_value(piece)
+        
+        reward = 0        
+        
         self.board.set_piece_value(0, piece)
 
         p_l, p_c = self.board.nr_to_coords(piece)
@@ -284,7 +287,8 @@ class Checkers:
             self.players_pieces[self.players_turn] -= 1
             # Adding one direction vector to the position where the piece will land
             m_l, m_c = m_l + dir_vector[0], m_c + dir_vector[1]
-        
+
+            reward = config.REWARD_EATING
         # If it's not a jump or if it is a jump without the possibility of a double jump.
         # Change the turn to the other player
         if m_l == 0:
@@ -296,12 +300,15 @@ class Checkers:
             self.players_turn = -self.players_turn
             self.board.reverse()
 
+        self.valid_moves_updated = False
+
+        return reward
 
     def step(self, action):
         self.current_move += 1
-        self.play(action)
+        reward = self.play(action)
         done, winner = self.game_finised()
-        return done, winner, self.players_turn
+        return done, winner, self.players_turn, reward
             
 
     def game_finised(self):

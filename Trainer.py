@@ -1,5 +1,5 @@
 from collections import deque
-import logging
+# import logging
 import pickle
 from unicodedata import ucd_3_2_0 
 import numpy as np
@@ -47,7 +47,7 @@ class Trainer:
 
         print("Starting to train...")
         for i in tqdm(range(config.EPISODES)):
-            logging.info(f"Starting Iteration {i+1}")
+            # logging.info(f"Starting Iteration {i+1}")
             self.play_training_game()
             self.save_training_data()
 
@@ -61,7 +61,7 @@ class Trainer:
     def compare_agents(self):
         winners = {-1:0, 0:0, 1: 0}
 
-        print(f"Playing {config.COMPARING_GAMES} between the agents")
+        print(f"Playing {config.COMPARING_GAMES} game between the agents")
         for i in tqdm(range(config.COMPARING_GAMES)):
             winner = self.play_training_game()
             
@@ -76,20 +76,20 @@ class Trainer:
 
 
     def train_nn(self, nn):
-        # TODO: Implement
-        batch = random.sample(self.replay_memory, config.BATCH_SIZE)
-        
-        X = np.array([data["board"] for data in batch])
-        X = X.reshape(X.shape[0], 1, 8, 8)
+        if len(self.replay_memory) >= config.BATCH_SIZE:
+            batch = random.sample(self.replay_memory, config.BATCH_SIZE)
+            
+            X = np.array([data["board"] for data in batch])
+            X = X.reshape(X.shape[0], 1, 8, 8)
 
-        y_value = np.array([data["value"] for data in batch])
+            y_value = np.array([data["value"] for data in batch])
 
-        y_policy = np.zeros([len(batch), self.game.ACTION_SPACE_SIZE])
-        for i, data in enumerate(batch):
-            for action in data["action_prob"]:
-                y_policy[i, action] = data["action_prob"][action]        
+            y_policy = np.zeros([len(batch), self.game.ACTION_SPACE_SIZE])
+            for i, data in enumerate(batch):
+                for action in data["action_prob"]:
+                    y_policy[i, action] = data["action_prob"][action]        
 
-        nn.train(X, y_policy, y_value)
+            nn.train(X, y_policy, y_value)
 
     def reset(self):
         if self.players[1].has_MCTS:
@@ -113,7 +113,7 @@ class Trainer:
             iteration = {"player":player_turn, "board":self.game.state, "action": action, "action_prob":action_prob}
             training_data.append(iteration)
 
-            done, winner, player_turn = self.game.step(action)
+            done, winner, player_turn, _ = self.game.step(action)
             if done:
                 self.backpropagete_value(training_data, winner)
         
