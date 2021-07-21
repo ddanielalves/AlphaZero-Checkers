@@ -1,13 +1,14 @@
 import re
 import numpy as np
-from flask import Flask, request
+from flask import Flask, request, Response
 from flask_cors import CORS, cross_origin
 
 from Checkers import Checkers as Game
 from MCTS import MCTS
 from PV_NN import Policy_Value_NN
-from Agents import DetermenisticAgent as Agent
+from Agents import OriginalMCTSAgent as Agent
 import config
+import dill
 
 app = Flask(__name__)
 app.config["DEBUG"] = True
@@ -16,9 +17,13 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 
 
-@app.route('/', methods=['GET'])
+@app.route("/")
 def home():
-    return "<h1>Distant Reading Archive</h1><p>This site is a prototype API for distant reading of science fiction novels.</p>"
+    resp = Response("Foo bar baz")
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp
+
+
 
 
 @app.route('/move', methods=['POST'])
@@ -26,14 +31,14 @@ def home():
 def move():
     data = request.get_json()
 
-    game = Game()
-    game.board.pieces = np.array(data["board"])
-    net = Policy_Value_NN(game, config.BEST_NN_PATH)
-    agent = Agent(net)
+    game = Game(pieces=np.array(data["board"]))
+    
+    # net = Policy_Value_NN(game, config.BEST_NN_PATH)
+    agent = Agent()
 
     action, prior = agent.predict(game)
-    print(prior)
-
+    with open("m.pik", "wb") as p:
+        dill.dump(agent.MCTS, p)
     return {"action": int(action), "prior": prior}
 
 app.run()

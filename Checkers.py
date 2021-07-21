@@ -6,54 +6,79 @@ import matplotlib.pyplot as plt
 from functools import lru_cache
 from MCTS import MCTS
 import config
+from numba import jit
 
 
 DIRECTIONS = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
 
+from numba import int32, float32    # import the types
+
+spec = [
+    ('value', int32),               # a simple scalar field
+    ('array', float32[:]),          # an array field
+]
+
+_board = np.indices((8, 8)).sum(axis=0) % 2
+board_coords = np.where(_board == 1)
+
+
+print(board_coords)
+
+# @jitclass(spec)
+
+@jit(nopython=True)
+def nr_to_coords(nr, board_coords):
+    return board_coords[0][nr], board_coords[1][nr]
 
 class Board:
-    def __init__(self):
+    def __init__(self, pieces = None):
         self.nrows = 8
         
         # _board is a matrix with 1 in the valid positions and 0 in the others.
-        self._board = np.indices((self.nrows, self.nrows)).sum(axis=0) % 2
+        # ._board = np.indices((self.nrows, self.nrows)).sum(axis=0) % 2
 
         # Flag used to initialize the render figure
         self.ready_to_render = False
 
         # Array of rows and columns used to convert index to coordinate
-        self.board_coords = np.where(self._board == 1)
-        self.reset()
+        
+        self.reset(pieces)
 
-    def reset(self):
-        self.pieces = np.zeros((self.nrows, self.nrows))
+    def reset(self, pieces=None):
+        if pieces is None:
+            self.pieces = np.zeros((self.nrows, self.nrows))
 
-        Xs, Ys = self.board_coords
-        for i in range(12):
-            self.pieces[Xs[i], Ys[i]] = -1
-            self.pieces[Xs[-1 * i - 1], Ys[-1 * i - 1]] = 1
+            Xs, Ys = board_coords
+            for i in range(12):
+                self.pieces[Xs[i], Ys[i]] = -1
+                self.pieces[Xs[-1 * i - 1], Ys[-1 * i - 1]] = 1
+        else:
+            self.pieces = pieces
 
         # state_ = self.pieces.reshape((1,8,8))
 
-    @lru_cache(maxsize=None)
-    def nr_to_coords(self, nr):
-        return self.board_coords[0][nr], self.board_coords[1][nr]
+    # @lru_cache(maxsize=1000)
+    # @jit(nopython=True)
 
-    def coordinates_to_nr(self, l, c):
-        for i in range(len(self.board_coords[0])):
-            l_, c_ = self.board_coords[0][i], self.board_coords[1][i]
+    @staticmethod
+    @jit(nopython=True)
+    def coordinates_to_nr(l, c):
+        for i in range(len(board_coords[0])):
+            l_, c_ = board_coords[0][i], board_coords[1][i]
             if l_== l and c_ == c:
                 return i
         return -1
     
+
     def piece_value(self, piece_nr=None, l=None, c=None):
         if piece_nr is not None:
-            l, c = self.nr_to_coords(piece_nr)
+            l, c = nr_to_coords(piece_nr, board_coords)
         return self.pieces[l, c]
+
 
     def set_piece_value(self, value, piece_nr=None, l=None, c=None):
         if piece_nr is not None:
-            l, c = self.nr_to_coords(piece_nr)
+            l, c = nr_to_coords(piece_nr, board_coords)
         self.pieces[l, c] = value
 
     def draw_piece_p1(self, position):
@@ -87,7 +112,7 @@ class Board:
 
         self.draw_pieces()
 
-        Ys, Xs = self.board_coords
+        Ys, Xs = board_coords
         for i, _ in enumerate(Xs):
             txt = self.board_ax.text(Xs[i] - 0.15, Ys[i] + 0.1, str(i), color="white", fontsize=10)
             txt.set_path_effects([PathEffects.withStroke(linewidth=2, foreground="black")])
@@ -138,7 +163,7 @@ class Board:
         if dir_vector[0] == 1 and not king:
             return False, False
 
-        l, c = self.nr_to_coords(piece)
+        l, c = nr_to_coords(piece, board_coords)
 
         l_m, c_m = l + dir_vector[0], c + dir_vector[1]
         if not self.valid_position(l_m, c_m):
@@ -174,30 +199,30 @@ class Board:
 
 
 class Checkers:
-    def __init__(self, max_moves=100):
+    def __init__(self, max_moves=500, pieces = None):
 
-        self.board = Board()
+        self.board = Board(pieces=pieces)
         self.max_moves = max_moves
         
         self.first_render = True
 
         self.ACTION_SPACE_SIZE = 32 * 4
         self.OBSERVATION_SPACE_VALUES = (1, 8, 8)
-        self.reset()
+        self.reset(pieces)
 
     @property
     def state(self):
         return self.board.pieces.reshape((1, 1, 8, 8))
 
     def copy(self):
-        c = Checkers(self.max_moves)
+        c = Checkers(self.max_moves, self.board.pieces)
         c.current_move = self.current_move
         c.players_turn = self.players_turn
         c.players_pieces = self.players_pieces.copy()
         c.board.pieces = self.board.pieces.copy()
         return c
 
-    def reset(self):
+    def reset(self, pieces=None):
         self.done = False
         self.current_move = 0
         self.valid_moves_updated = False
@@ -207,9 +232,15 @@ class Checkers:
         self.players_turn = 1
 
         # Nr of pieces of each player
-        self.players_pieces = {1: 12, -1: 12}
+        if pieces is not None:
+            p1 = len(np.where(pieces >= 1)[0])
+            p2 = len(np.where(pieces <= -1)[0])
+            self.players_pieces = {1: p1, -1: p2}
 
-        return self.board.reset()
+        else:
+            self.players_pieces = {1: 12, -1: 12}
+
+        return self.board.reset(pieces)
 
 
     def get_valid_actions(self):
@@ -277,14 +308,14 @@ class Checkers:
         
         self.board.set_piece_value(0, piece)
 
-        p_l, p_c = self.board.nr_to_coords(piece)
+        p_l, p_c = nr_to_coords(piece, board_coords)
 
         m_l, m_c = p_l + dir_vector[0], p_c + dir_vector[1]
 
         if jump:
             # Set the piece value to 0 on the board
             self.board.set_piece_value(0, c=m_c, l=m_l)
-            self.players_pieces[self.players_turn] -= 1
+            self.players_pieces[-self.players_turn] -= 1
             # Adding one direction vector to the position where the piece will land
             m_l, m_c = m_l + dir_vector[0], m_c + dir_vector[1]
 
@@ -295,7 +326,7 @@ class Checkers:
             piece_val = 2
         self.board.set_piece_value(piece_val, c=m_c, l=m_l)
 
-        piece = self.board.coordinates_to_nr(m_l, m_c)
+        piece = Board.coordinates_to_nr(m_l, m_c)
         if not (jump and self.board.check_double_jump(piece)):
             self.players_turn = -self.players_turn
             self.board.reverse()
@@ -307,11 +338,11 @@ class Checkers:
     def step(self, action):
         self.current_move += 1
         reward = self.play(action)
-        done, winner = self.game_finised()
+        done, winner = self.game_finished()
         return done, winner, self.players_turn, reward
             
 
-    def game_finised(self):
+    def game_finished(self):
         done = False
         winner = None
         

@@ -1,51 +1,62 @@
-from Agents import RandomAgent
-from MCTS import MCTS
+from os import stat
+from types import MethodType
+from Agents import StochasticAgent as Agent
+from MCTS_Original import MCTS
 import pickle
 import config
 import random
 import numpy as  np
 from PV_NN import Policy_Value_NN
-import Checkers
+from Checkersarray import Checkers as Game
 from Trainer import Trainer 
 import dill
+import sys 
+import tracemalloc
 
-c = Checkers.Checkers()
-
-# p1 = RandomAgent()
-p2 = Trainer.get_best_agent(c)
-
-# players = {1:p1, -1:p2}
-# t = Trainer(c, players = players)
-# t.compare_agents()
-
-# p = Policy_Value_NN(c)
-
-# board =np.array([[-1., -0., -1., -0., -1., -0., -1., -0.],
-#        [-0., -1., -0., -1., -0., -1., -0., -1.],
-#        [-1., -0., -1., -0., -1., -0., -0., -0.],
-#        [-0., -0., -0., -0., -0., -0., -0., -1.],
-#        [-0., -0., -0., -0., -0., -0., -0., -0.],
-#        [-0.,  1., -0.,  1., -0.,  1., -0.,  1.],
-#        [ 1., -0.,  1., -0.,  1., -0.,  1., -0.],
-#        [-0.,  1., -0.,  1., -0.,  1., -0.,  1.]])
-# c.board.pieces = board
-
-# p.predict(c)
-
-# with open("m1.pk", "rb") as pk:
-#     data = dill.load(pk)
+import cProfile
+import pstats
 
 
-# t.train(p)
+
+# t = Trainer(c)
+
+# t.load_players()
+# t.load_training_data()
+
+            
+    # t.save_training_data()
+
+# t.train_nn(t.players[1].policy_value_network)
 
 
-t = Trainer(c)
+import time
+def main():
+    game = Game(pieces=None)
 
-t.load_players()
-t.players[-1] = 
-t.load_training_data()
+    m = MCTS()
 
-t.train_nn(t.players[1].policy_value_network)
-winner = t.compare_agents()
+    t1 = time.time()
 
-t.update_best_agent(winner)
+    for i in range(10):
+        m.run_one_simulation(game)
+
+with cProfile.Profile() as pr:
+    main()
+
+stats=pstats.Stats(pr)
+stats.sort_stats(pstats.SortKey.TIME)
+# stats.dump_stats(filename="profile.prof")
+stats.print_stats(10)
+
+# game = Game(pieces=None)
+# print(game.board.pieces)
+# print(game.nr_to_coord(21))
+
+
+
+# agent = Agent(net)
+
+# action, prior = agent.predict(game)
+
+# with open("m.pik", "wb") as p:
+#     dill.dump(agent.MCTS, p)

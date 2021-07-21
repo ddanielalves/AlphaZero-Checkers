@@ -1,7 +1,7 @@
 from warnings import resetwarnings
 import numpy as np
 from tensorflow.python.module.module import valid_identifier
-
+import gc
 import config
 
 
@@ -21,6 +21,10 @@ class Node:
         self.P = prior_probability
 
         self.children = {}
+
+    def __repr__(self):
+        # return f"Node {self.N=} {self.W=} {self.Q=:.2f} {self.P=:.1f}"
+        return f"Node {self.N=} {self.Q=:.2f}"
 
     def expand(self, prior_probabilities):
         """On a leaf node, expand will create the children Node 
@@ -162,8 +166,11 @@ class MCTS:
         # print('finding leaf', game.board.pieces)
         leaf, game = self.find_leaf(game)
         
-        end, winner = game.game_finised()        
+        end, winner = game.game_finished()        
         player = game.get_player_turn()
+
+        # aux={i:self.root.children[i].N for i in self.root.children}
+        # print(game.players_pieces,aux)
 
         # If the game has ended backup the ending value.
         # Instead of the one that came from the value network.
@@ -174,9 +181,10 @@ class MCTS:
                 value = 0
             else:
                 value = -1
+            print("There is a winner", winner, value, self.root.children)
         else:
             if random:
-                value = 0.5
+                value = 0
                 valid_actions = game.get_valid_actions()
                 policy = dict(zip(valid_actions, [1/len(valid_actions)]*len(valid_actions)))
             else:
@@ -190,15 +198,18 @@ class MCTS:
     def find_leaf(self, game_):
         game = game_.copy()
         node = self.root
-        node.player = game.get_player_turn()
+        player = game.get_player_turn()
         while not node.is_leaf():
             action = node.get_simulation_action()
             # print(game.get_valid_actions(), action)
             _, _, _, reward = game.step(action)
-            if reward != 0:
-                self.backup_values(node, reward, node.player)
 
             node = node.children[action]
-            node.player = game.get_player_turn()
-            
+            node.player = player
+            player = game.get_player_turn()
+
+            if reward != 0:
+                # print(game.board.pieces, reward, node.player, action)
+                self.backup_values(node, reward, node.player)
+        node.board = game.board.pieces
         return node, game

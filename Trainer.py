@@ -11,6 +11,7 @@ import Agents
 from PV_NN import Policy_Value_NN
 import config
 
+
 class Trainer:
     def __init__(self, game, load_nn = False, players = None) -> None:
         # TODO: Implement Loading of NN and checking if exists
@@ -42,6 +43,7 @@ class Trainer:
         self.replay_memory += training_data
 
     def train(self, load_train = True):
+
         if load_train:
             self.load_training_data()
 
@@ -49,6 +51,7 @@ class Trainer:
         for i in tqdm(range(config.EPISODES)):
             # logging.info(f"Starting Iteration {i+1}")
             self.play_training_game()
+
             self.save_training_data()
 
             if i != 0 and i % config.TRAIN_EVERY == 0 and len(self.replay_memory) >= config.BATCH_SIZE:
@@ -56,6 +59,8 @@ class Trainer:
                 winner_agent = self.compare_agents()
                 self.update_best_agent(winner_agent)
                 self.load_players()
+            
+        
 
 
     def compare_agents(self):
@@ -92,10 +97,8 @@ class Trainer:
             nn.train(X, y_policy, y_value)
 
     def reset(self):
-        if self.players[1].has_MCTS:
-            self.players[1].MCTS.reset()
-        if self.players[-1].has_MCTS:
-            self.players[-1].MCTS.reset()
+        self.players[1].reset()
+        self.players[-1].reset()
         self.game.reset()
 
 

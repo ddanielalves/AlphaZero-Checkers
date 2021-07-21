@@ -86,7 +86,7 @@ class Policy_Value_NN:
         pi = pi/pi.sum()    
         if pi.sum()==0:
 
-            print(pi, valid_moves, policy, board, game.game_finised())
+            print(pi, valid_moves, policy, board, game.game_finished())
             raise Exception("oldas")
         policy = dict(zip(valid_moves, pi))
 

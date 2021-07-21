@@ -4,4 +4,4 @@ class Competition:
             pass
 
         if mode == "bracket":
-            
+            pass
