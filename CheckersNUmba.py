@@ -6,33 +6,36 @@ import matplotlib.pyplot as plt
 from functools import lru_cache
 from MCTS import MCTS
 import config
+from numba import njit
 
 
 DIRECTIONS = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
 
+_board = np.indices((8, 8)).sum(axis=0) % 2
+board_coords = np.where(_board == 1)
 
 class Board:
     def __init__(self, pieces = None):
         self.nrows = 8
         
         # _board is a matrix with 1 in the valid positions and 0 in the others.
-        self._board = np.indices((self.nrows, self.nrows)).sum(axis=0) % 2
+        
 
         # Flag used to initialize the render figure
         self.ready_to_render = False
 
         # Array of rows and columns used to convert index to coordinate
-        self.board_coords = np.where(self._board == 1)
+        
         self.reset(pieces)
 
     def reset(self, pieces=None):
         if pieces is None:
-            self.pieces = [[0 for _ in range(self.nrows)] for _ in range(self.nrows)]
+            self.pieces = np.zeros((self.nrows, self.nrows))
 
             Xs, Ys = self.board_coords
             for i in range(12):
-                self.pieces[Xs[i]][Ys[i]] = -1
-                self.pieces[Xs[-1 * i - 1]][Ys[-1 * i - 1]] = 1
+                self.pieces[Xs[i], Ys[i]] = -1
+                self.pieces[Xs[-1 * i - 1], Ys[-1 * i - 1]] = 1
         else:
             self.pieces = pieces
 
@@ -52,12 +55,12 @@ class Board:
     def piece_value(self, piece_nr=None, l=None, c=None):
         if piece_nr is not None:
             l, c = self.nr_to_coords(piece_nr)
-        return self.pieces[l][c]
+        return self.pieces[l, c]
 
     def set_piece_value(self, value, piece_nr=None, l=None, c=None):
         if piece_nr is not None:
             l, c = self.nr_to_coords(piece_nr)
-        self.pieces[l][c] = value
+        self.pieces[l, c] = value
 
     def draw_piece_p1(self, position):
         circle = plt.Circle(position, 0.4, color=config.LIGHT_PIECE_COLOR, linewidth=1, ec="white")
@@ -68,17 +71,17 @@ class Board:
         self.board_ax.add_artist(circle)
     
     def draw_pieces(self):
-        Ys, Xs = np.where(self.pieces > 0)
+        Ys, Xs = np.where(np.array(self.pieces) > 0)
         for i in range(len(Xs)):
             self.draw_piece_p1((Xs[i], Ys[i]))
 
-        Ys, Xs = np.where(self.pieces < 0)
+        Ys, Xs = np.where(np.array(self.pieces) < 0)
         for i in range(len(Xs)):
             self.draw_piece_p2((Xs[i], Ys[i]))
 
 
     def reverse(self):
-        self.pieces = list(np.rot90(np.rot90(self.pieces)) * -1)
+        self.pieces = np.rot90(np.rot90(self.pieces)) * -1
 
     def render(self):
         if self.ready_to_render == False:
@@ -211,13 +214,8 @@ class Checkers:
 
         # Nr of pieces of each player
         if pieces is not None:
-            p1,p2, = 0,0
-            for row in pieces:
-                for i in row:
-                    if i >= 1:
-                        p1+=1
-                    elif i<= -1:
-                        p2 += 1
+            p1 = len(np.where(pieces >= 1)[0])
+            p2 = len(np.where(pieces <= -1)[0])
             self.players_pieces = {1: p1, -1: p2}
 
         else:

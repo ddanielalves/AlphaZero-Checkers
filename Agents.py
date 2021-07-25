@@ -41,7 +41,8 @@ class OriginalMCTSAgent:
         action = None
         total_n = 0
         action_ns = []
-        print(self.MCTS.root.children)
+        # print(self.MCTS.root.children)
+        print(self.MCTS.root.children.keys())
 
         for child_action in self.MCTS.root.children:
 

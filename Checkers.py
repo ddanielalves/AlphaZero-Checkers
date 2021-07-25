@@ -4,29 +4,28 @@ import numpy as np
 import matplotlib.patheffects as PathEffects
 import matplotlib.pyplot as plt
 from functools import lru_cache
-from MCTS import MCTS
 import config
 from numba import jit
+import copy
 
 
 DIRECTIONS = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
 
-from numba import int32, float32    # import the types
-
-spec = [
-    ('value', int32),               # a simple scalar field
-    ('array', float32[:]),          # an array field
-]
 
 _board = np.indices((8, 8)).sum(axis=0) % 2
-board_coords = np.where(_board == 1)
+# board_coords = np.where(_board == 1)
+board_coords = [
+    [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5,
+       5, 5, 6, 6, 6, 6, 7, 7, 7, 7],
+    [1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7, 0, 2,
+       4, 6, 1, 3, 5, 7, 0, 2, 4, 6]
+]
 
-
-print(board_coords)
+# print(board_coords)
 
 # @jitclass(spec)
 
-@jit(nopython=True)
+# @jit(nopython=True)
 def nr_to_coords(nr, board_coords):
     return board_coords[0][nr], board_coords[1][nr]
 
@@ -46,12 +45,12 @@ class Board:
 
     def reset(self, pieces=None):
         if pieces is None:
-            self.pieces = np.zeros((self.nrows, self.nrows))
+            self.pieces = np.zeros((self.nrows, self.nrows)).tolist()
 
-            Xs, Ys = board_coords
+            Rs, Cs = board_coords
             for i in range(12):
-                self.pieces[Xs[i], Ys[i]] = -1
-                self.pieces[Xs[-1 * i - 1], Ys[-1 * i - 1]] = 1
+                self.pieces[Rs[i]][Cs[i]] = -1
+                self.pieces[Rs[-1 * i - 1]][Cs[-1 * i - 1]] = 1
         else:
             self.pieces = pieces
 
@@ -61,7 +60,6 @@ class Board:
     # @jit(nopython=True)
 
     @staticmethod
-    @jit(nopython=True)
     def coordinates_to_nr(l, c):
         for i in range(len(board_coords[0])):
             l_, c_ = board_coords[0][i], board_coords[1][i]
@@ -73,13 +71,13 @@ class Board:
     def piece_value(self, piece_nr=None, l=None, c=None):
         if piece_nr is not None:
             l, c = nr_to_coords(piece_nr, board_coords)
-        return self.pieces[l, c]
+        return self.pieces[l][c]
 
 
     def set_piece_value(self, value, piece_nr=None, l=None, c=None):
         if piece_nr is not None:
             l, c = nr_to_coords(piece_nr, board_coords)
-        self.pieces[l, c] = value
+        self.pieces[l][c] = value
 
     def draw_piece_p1(self, position):
         circle = plt.Circle(position, 0.4, color=config.LIGHT_PIECE_COLOR, linewidth=1, ec="white")
@@ -90,17 +88,18 @@ class Board:
         self.board_ax.add_artist(circle)
     
     def draw_pieces(self):
-        Ys, Xs = np.where(self.pieces > 0)
+        Ys, Xs = np.where(np.array(self.pieces) > 0)
         for i in range(len(Xs)):
             self.draw_piece_p1((Xs[i], Ys[i]))
 
-        Ys, Xs = np.where(self.pieces < 0)
+        Ys, Xs = np.where(np.array(self.pieces) < 0)
         for i in range(len(Xs)):
             self.draw_piece_p2((Xs[i], Ys[i]))
 
 
     def reverse(self):
-        self.pieces = np.rot90(np.rot90(self.pieces)) * -1
+        self.pieces = np.rot90(self.pieces, 2) * -1
+        self.pieces = self.pieces.tolist()
 
     def render(self):
         if self.ready_to_render == False:
@@ -108,7 +107,7 @@ class Board:
             self.ready_to_render = True
 
         self.clear_board()
-        self.board_ax.matshow(self._board, cmap="Greys")
+        self.board_ax.matshow(_board, cmap="Greys")
 
         self.draw_pieces()
 
@@ -142,8 +141,9 @@ class Board:
         return False
 
     def is_valid_move(self, action):
-        if not isinstance(action, tuple):
-            action = self.action_to_move(action)
+
+        # if not isinstance(action, tuple):
+        #     action = self.action_to_move(action)
 
         piece, direction = action
         dir_vector = DIRECTIONS[direction]
@@ -212,18 +212,17 @@ class Checkers:
 
     @property
     def state(self):
-        return self.board.pieces.reshape((1, 1, 8, 8))
+        return np.array(self.board.pieces).reshape((1, 1, 8, 8))
 
     def copy(self):
         c = Checkers(self.max_moves, self.board.pieces)
         c.current_move = self.current_move
         c.players_turn = self.players_turn
         c.players_pieces = self.players_pieces.copy()
-        c.board.pieces = self.board.pieces.copy()
+        c.board.pieces = copy.deepcopy(self.board.pieces)
         return c
 
     def reset(self, pieces=None):
-        self.done = False
         self.current_move = 0
         self.valid_moves_updated = False
 
@@ -233,8 +232,13 @@ class Checkers:
 
         # Nr of pieces of each player
         if pieces is not None:
-            p1 = len(np.where(pieces >= 1)[0])
-            p2 = len(np.where(pieces <= -1)[0])
+            p1,p2, = 0,0
+            for row in pieces:
+                for i in row:
+                    if i >= 1:
+                        p1+=1
+                    elif i<= -1:
+                        p2 += 1
             self.players_pieces = {1: p1, -1: p2}
 
         else:
@@ -291,13 +295,11 @@ class Checkers:
 
  
     def play(self, action):
-        if not isinstance(action, tuple):
-            old_a = action
-            action = self.board.action_to_move(action)
-
+       
+        action = self.board.action_to_move(action)
         valid, jump = self.board.is_valid_move(action)
         if not valid:
-            raise Exception("notvalid", self.board.pieces, old_a, action, self.get_valid_moves(), self.players_turn )
+            raise Exception("notvalid", self.board.pieces, action, self.get_valid_moves(), self.players_turn )
 
         piece, dir_vector = action
         if not isinstance(dir_vector, tuple):

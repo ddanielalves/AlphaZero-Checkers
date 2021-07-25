@@ -1,13 +1,13 @@
 from os import stat
 from types import MethodType
-from Agents import StochasticAgent as Agent
+from Agents import OriginalMCTSAgent as Agent
 from MCTS_Original import MCTS
 import pickle
 import config
 import random
 import numpy as  np
 from PV_NN import Policy_Value_NN
-from Checkersarray import Checkers as Game
+from Checkers import Checkers as Game
 from Trainer import Trainer 
 import dill
 import sys 
@@ -37,8 +37,9 @@ def main():
 
     t1 = time.time()
 
-    for i in range(10):
+    for i in range(100):
         m.run_one_simulation(game)
+        # print(np.array(game.board.pieces))
 
 with cProfile.Profile() as pr:
     main()
@@ -46,7 +47,7 @@ with cProfile.Profile() as pr:
 stats=pstats.Stats(pr)
 stats.sort_stats(pstats.SortKey.TIME)
 # stats.dump_stats(filename="profile.prof")
-stats.print_stats(10)
+stats.print_stats(100)
 
 # game = Game(pieces=None)
 # print(game.board.pieces)

@@ -1,5 +1,5 @@
 from Agents import HumanAgent
-from Agents import StochasticAgent as OpponentAgent
+from Agents import OriginalMCTSAgent as OpponentAgent
 from Checkers import Checkers
 from PV_NN import Policy_Value_NN
 
@@ -16,10 +16,10 @@ def move_mcts_roots(p1,p2, action):
 if __name__ == "__main__":    
     game = Checkers()
 
-    p1 = HumanAgent()
+    p2 = HumanAgent()
 
     pv_net = Policy_Value_NN(game)
-    p2 = OpponentAgent(pv_net)
+    p1 = OpponentAgent()
     
     players = {1: p1, -1:p2}
 

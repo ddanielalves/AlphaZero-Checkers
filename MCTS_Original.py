@@ -107,6 +107,7 @@ class MCTS:
         Args:
             action (int): Action selected by one of the players
         """
+        print("moving root")
         if self.root.children != {}: 
             new_root = self.root.children[action]
             del new_root.parent
@@ -156,12 +157,13 @@ class MCTS:
             self.run_one_simulation(game)
 
 
-    def simulate(self, game):
-        done, winner = game.game_finished()
+    def simulate(self, old_game_):
+        game_ = old_game_.copy()
+        done, winner = game_.game_finished()
         turns = 0
         while not done:
-            action = np.random.choice(game.get_valid_actions())
-            done, winner, _, reward = game.step(action)
+            action = np.random.choice(game_.get_valid_actions())
+            done, winner, _, reward = game_.step(action)
             turns += 1
         return winner, turns
 
@@ -170,10 +172,14 @@ class MCTS:
     def run_one_simulation(self, old_game):
         # print('finding leaf', game.board.pieces)
         # print(old_game.players_turn)
-        leaf, game, turns_ = self.find_leaf(old_game)
-        leaf.expand(game.get_valid_actions())
+        # print(np.array(old_game.board.pieces))
+        leaf, new_game, turns_ = self.find_leaf(old_game)
         
-        winner, turns = self.simulate(game)
+        # print(np.array(old_game.board.pieces))
+        
+        winner, turns = self.simulate(new_game)
+        leaf.expand(new_game.get_valid_actions())
+
         # print(self.root.children, winner, turns+turns_)
         # aux={i:self.root.children[i].N for i in self.root.children}
         # print(game.players_pieces,aux)
