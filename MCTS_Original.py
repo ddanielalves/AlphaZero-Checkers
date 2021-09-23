@@ -169,7 +169,7 @@ class MCTS:
 
         while not done:
             action = np.random.choice(game_.get_valid_actions())
-            done, winner, _ = game_.step(action)
+            done, winner, _, _ = game_.step(action)
             turns += 1
             
         return winner, turns

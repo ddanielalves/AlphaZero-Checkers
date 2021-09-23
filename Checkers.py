@@ -14,6 +14,8 @@ import numpy as np
 import matplotlib.patheffects as PathEffects
 import matplotlib.pyplot as plt
 from functools import lru_cache
+
+from numpy.core.fromnumeric import repeat
 from MCTS import MCTS
 import config
 
@@ -470,13 +472,16 @@ class Checkers:
 
         m_l, m_c = p_l + dir_vector[0], p_c + dir_vector[1]
 
+        reward = 0
+
         if jump:
             # Set the piece value to 0 on the board
             self.board.set_piece_value(0, c=m_c, l=m_l)
             self.players_pieces[-self.players_turn] -= 1
             # Adding one direction vector to the position where the piece will land
             m_l, m_c = m_l + dir_vector[0], m_c + dir_vector[1]
-
+            
+            reward = config.REWARD_EATING
         # If it's not a jump or if it is a jump without the possibility of a double jump.
         # Change the turn to the other player
         if m_l == 0:
@@ -490,6 +495,7 @@ class Checkers:
 
         self.valid_moves_updated = False
 
+        return reward
 
     def step(self, action):
         """Method used to interact with the agents and the RL models
@@ -504,9 +510,9 @@ class Checkers:
         """
 
         self.current_move += 1
-        self.play(action)
+        reward = self.play(action)
         done, winner = self.game_finished()
-        return done, winner, self.players_turn
+        return done, winner, self.players_turn, reward
             
 
     def game_finished(self):

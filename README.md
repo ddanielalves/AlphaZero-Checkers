@@ -41,7 +41,7 @@ def move():
 
 ## Setup:
 
--   git clone repo
+-   git clone https://github.com/ddanielalves/AlphaZero-Checkers.git
 -   pip install -r requirements.txt
 
 ### To train the model

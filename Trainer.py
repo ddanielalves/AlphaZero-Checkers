@@ -35,6 +35,7 @@ class Trainer:
     def load_players(self):
         """Load the players from previous training iterations
         """
+        
         player1 = Trainer.get_best_agent(self.game)
         player2 = Trainer.get_best_agent(self.game)
 
@@ -168,11 +169,9 @@ class Trainer:
             action, action_prob = player.predict(self.game)
             self.move_players_mcts_root(action)
             iteration = {"player":player_turn, "board":self.game.state.copy(), "action": action, "action_prob":action_prob}
-            # print('state', iteration["board"])
+
             training_data.append(iteration)
-            # break
-            done, winner, player_turn = self.game.step(action)
-            # print('state2', iteration["board"],"-" * 20, training_data[-1])
+            done, winner, player_turn, _ = self.game.step(action)
 
             if done:
                 self.backpropagete_value(training_data, winner)

@@ -221,13 +221,13 @@ class MCTS:
         player = game.get_player_turn()
         while not node.is_leaf():
             action = node.get_simulation_action()
-            _, _, _, = game.step(action)
+            _, _, _, reward = game.step(action)
 
             node = node.children[action]
             node.player = player
             player = game.get_player_turn()
 
-            # if reward != 0:
-            #     self.backup_values(node, reward, node.player)
+            if reward != 0:
+                self.backup_values(node, reward, node.player)
         node.board = game.board.pieces
         return node, game
