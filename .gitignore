@@ -1,2 +1,4 @@
 __pycache__
 *.pk
+.ipynb_checkpoints
+*.pickle

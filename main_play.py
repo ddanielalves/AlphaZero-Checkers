@@ -33,6 +33,6 @@ if __name__ == "__main__":
         
         action = players[players_turn].predict(game)[0]
         print(action)
-        done, winner, players_turn, _ = game.step(action)
+        done, winner, players_turn = game.step(action)
         
         move_mcts_roots(p1,p2, action)

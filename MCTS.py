@@ -23,7 +23,6 @@ class Node:
         self.children = {}
 
     def __repr__(self):
-        # return f"Node {self.N=} {self.W=} {self.Q=:.2f} {self.P=:.1f}"
         return f"Node {self.N=} {self.Q=:.2f}"
 
     def expand(self, prior_probabilities):
@@ -43,6 +42,7 @@ class Node:
         Returns:
             bool: True if the current node is a leaf
         """
+
         return len(self.children) == 0
     
     def update_value(self, value):
@@ -54,6 +54,7 @@ class Node:
         Args:
             value (float): Value given by the value Network of by the end of a game
         """
+
         self.N += 1
         self.W += value
         self.Q = self.W/self.N
@@ -73,6 +74,7 @@ class Node:
         Returns:
             int: action to take
         """
+
         children_actions = self.children
         sum_n = 0
         for action in children_actions:
@@ -84,8 +86,9 @@ class Node:
             node = children_actions[action]
             
             u = config.C_PUCT * node.P * np.sqrt(sum_n)/(1+node.N)
+            # print(node.P)
             action_values.append(node.Q + u)
- 
+        # print(action_values, children_actions)
         return actions[np.argmax(action_values)]
 
     
@@ -105,6 +108,7 @@ class MCTS:
     def reset(self):
         """Resets the root node
         """
+
         self.root = Node(None,0)
 
     def move_root(self, action):
@@ -114,6 +118,7 @@ class MCTS:
         Args:
             action (int): Action selected by one of the players
         """
+
         if self.root.children != {}: 
             new_root = self.root.children[action]
             del new_root.parent
@@ -127,6 +132,7 @@ class MCTS:
         Returns:
             dict: Children of the current root node
         """
+
         return self.root.children
 
 
@@ -139,6 +145,7 @@ class MCTS:
             value (float): Value to be updated throughout the Tree
             player (int): Player that took the last action.
         """
+
         node = leaf
         while node is not self.root:
             if node.player == player:
@@ -163,14 +170,18 @@ class MCTS:
 
 
     def run_one_simulation(self, game, random=False):
-        # print('finding leaf', game.board.pieces)
+        """Run one simulation of 
+
+        Args:
+            game (game): Game being used to simulate the actions
+            random (bool, optional): Flag used to select the policy of this simulation. 
+                                    If True, the engine uses a random policy instead of querying the policy nn. Defaults to False.
+        """
+
         leaf, game = self.find_leaf(game)
         
         end, winner = game.game_finished()        
         player = game.get_player_turn()
-
-        # aux={i:self.root.children[i].N for i in self.root.children}
-        # print(game.players_pieces,aux)
 
         # If the game has ended backup the ending value.
         # Instead of the one that came from the value network.
@@ -181,7 +192,6 @@ class MCTS:
                 value = 0
             else:
                 value = -1
-            print("There is a winner", winner, value, self.root.children)
         else:
             if random:
                 value = 0
@@ -196,20 +206,28 @@ class MCTS:
 
 
     def find_leaf(self, game_):
+        """Find a terminal or unvisited node, aka leaf, in the Monte Carlo Tree
+
+        Args:
+            game_ (game): Game object used for simulations
+
+        Returns:
+            node: Leaf node found
+            game: Copied version of the game object
+        """
+
         game = game_.copy()
         node = self.root
         player = game.get_player_turn()
         while not node.is_leaf():
             action = node.get_simulation_action()
-            # print(game.get_valid_actions(), action)
-            _, _, _, reward = game.step(action)
+            _, _, _, = game.step(action)
 
             node = node.children[action]
             node.player = player
             player = game.get_player_turn()
 
-            if reward != 0:
-                # print(game.board.pieces, reward, node.player, action)
-                self.backup_values(node, reward, node.player)
+            # if reward != 0:
+            #     self.backup_values(node, reward, node.player)
         node.board = game.board.pieces
         return node, game

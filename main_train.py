@@ -7,24 +7,10 @@ import dill
 import pickle
 
 
-g = Checkers()
+g = Checkers(max_moves = 200, nrows=8)
 t = Trainer(g)
 
-# with cProfile.Profile() as pr:
-#     t.train()
-
-# stats = pstats.Stats(pr)
-# stats.sort_stats(pstats.SortKey.TIME)
-# stats.print_stats()
-# try:
 
 t.train()
-# except Exception as e:
-#     print(e)
-#     with open("m1.pk", "wb") as pk:
-#         del t.players[1].MCTS.policy_value_netwok
-#         dill.dump(t.players[1].MCTS, pk)
 
-#     with open("m2.pk", "wb") as pk:
-#         del t.players[-1].MCTS.policy_value_netwok
-#         dill.dump(t.players[-1].MCTS, pk)
+

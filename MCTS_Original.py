@@ -53,6 +53,7 @@ class Node:
         Args:
             value (float): Value given by the value Network of by the end of a game
         """
+
         self.N += 1
         self.W += value
         self.Q = self.W/self.N
@@ -63,23 +64,24 @@ class Node:
         The action selected is the one that maximizes the following function
             f = Q + u,
         where Q is the Q value of each child node.
-        
         And u is given by:
-        u = C_PUCT * node.P * np.sqrt(sum_n)/(1+node.N), 
+        u = C_PUCT * np.sqrt(sum_n)/(1+node.N), 
         where sum_n is the sum of the visit counts of every children.
-
 
         Returns:
             int: action to take
         """
+
         children_actions = self.children
         sum_n = self.N
         action_values = []
         actions = list(children_actions.keys())
+
         for action in actions:
             node = children_actions[action]
             u = config.C_PUCT * np.sqrt(np.log(1+sum_n)/(1+node.N))
             action_values.append(node.Q + u)
+
         return actions[np.argmax(action_values)]
 
     
@@ -98,6 +100,7 @@ class MCTS:
     def reset(self):
         """Resets the root node
         """
+
         self.root = Node(None)
 
     def move_root(self, action):
@@ -107,7 +110,7 @@ class MCTS:
         Args:
             action (int): Action selected by one of the players
         """
-        print("moving root")
+
         if self.root.children != {}: 
             new_root = self.root.children[action]
             del new_root.parent
@@ -121,6 +124,7 @@ class MCTS:
         Returns:
             dict: Children of the current root node
         """
+
         return self.root.children
 
 
@@ -138,6 +142,7 @@ class MCTS:
         while node is not self.root:
             if node.player == winner:
                 value_aux = config.REWARD_WINNING/(turns+1)
+
             else:
                 value_aux = -config.REWARD_WINNING/(turns+1)
         
@@ -161,28 +166,21 @@ class MCTS:
         game_ = old_game_.copy()
         done, winner = game_.game_finished()
         turns = 0
+
         while not done:
             action = np.random.choice(game_.get_valid_actions())
-            done, winner, _, reward = game_.step(action)
+            done, winner, _ = game_.step(action)
             turns += 1
+            
         return winner, turns
 
 
 
     def run_one_simulation(self, old_game):
-        # print('finding leaf', game.board.pieces)
-        # print(old_game.players_turn)
-        # print(np.array(old_game.board.pieces))
         leaf, new_game, turns_ = self.find_leaf(old_game)
-        
-        # print(np.array(old_game.board.pieces))
-        
+                
         winner, turns = self.simulate(new_game)
         leaf.expand(new_game.get_valid_actions())
-
-        # print(self.root.children, winner, turns+turns_)
-        # aux={i:self.root.children[i].N for i in self.root.children}
-        # print(game.players_pieces,aux)
 
         # If the game has ended backup the ending value.
         # Instead of the one that came from the value network.
@@ -197,15 +195,12 @@ class MCTS:
         turns = 0
         while not node.is_leaf():
             action = node.get_simulation_action()
-            # print(game.get_valid_actions(), action)
-            _, _, _, reward = game.step(action)
+            game.step(action)
 
             node = node.children[action]
             node.player = player
             player = game.get_player_turn()
             turns+=1
-            # if reward != 0:
-            #     # print(game.board.pieces, reward, node.player, action)
-            #     self.backup_values(node, reward, node.player)
+
         node.board = game.board.pieces
         return node, game, turns
