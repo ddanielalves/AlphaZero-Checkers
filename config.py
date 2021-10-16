@@ -9,6 +9,7 @@ SQUARE_SIZE = 80
 C_PUCT = 1
 TAU = 1
 
+REWARD_WINNING = 1
 REWARD_EATING = 0.3
 
 # Number of moves to play between each prediction. Using the NN

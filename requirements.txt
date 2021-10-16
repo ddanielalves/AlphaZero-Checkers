@@ -3,3 +3,4 @@ tensorflow
 flask
 flask_cors
 tqdm
+matplotlib
